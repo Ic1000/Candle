@@ -1,0 +1,74 @@
+local r0_0 = game:GetObjects("rbxassetid://18499257720")[1]
+r0_0.Grip = CFrame.new(0.205505371, -0.140681446, -0.0234375, 0, 0, 1, 0, 1, 0, -1, 0, 0)
+
+-- Lấy thẳng r0_0 làm tool luôn, không cần tìm "Candle" trong Backpack tránh lỗi treo script
+local r2_0 = r0_0 
+r2_0.Parent = game.Players.LocalPlayer.Backpack
+
+local r1_0 = game.Players.LocalPlayer
+local r3_0 = Instance.new("Animation")
+r3_0.AnimationId = "rbxassetid://11545520304"
+
+local r4_0 = Instance.new("Sound")
+r4_0.SoundId = "rbxassetid://11702836205"
+r4_0.Parent = r2_0
+
+local r5_0 = nil
+
+-- Hàm bật/tắt ngọn lửa đỏ
+local function setFlameState(enable)
+    -- Tìm linh hoạt các phần tử con trong Tool thay vì bắt buộc đúng chuỗi cấu trúc cứng
+    local attachOn = r2_0:FindFirstChild("Candle", true) or r2_0:FindFirstChild("AttachOn", true)
+    if attachOn then
+        -- Chỉnh ánh sáng (MainLight hoặc PointLight bất kỳ)
+        local mainLight = attachOn:FindFirstChild("MainLight") or attachOn:FindFirstChildWhichIsA("PointLight")
+        if mainLight then
+            mainLight.Color = Color3.fromRGB(255, 0, 0) -- Màu đỏ
+            mainLight.Brightness = enable and 3 or 0     
+            mainLight.Range = enable and 15 or 0
+            mainLight.Enabled = enable
+        end
+
+        -- Chỉnh các hạt lửa/khói (ParticleEmitter)
+        for _, particle in pairs(attachOn:GetDescendants()) do
+            if particle:IsA("ParticleEmitter") then
+                particle.Color = ColorSequence.new(Color3.fromRGB(255, 0, 0))
+                particle.Enabled = enable
+            end
+        end
+    end
+end
+
+-- Tắt ánh sáng ban đầu khi nến chưa được cầm
+task.spawn(function()
+    setFlameState(false)
+end)
+
+-- Khi cầm nến ra
+r2_0.Equipped:Connect(function()
+    setFlameState(true) -- Bật lửa đỏ
+    r4_0:Play()
+    
+    local character = r1_0.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            -- Sử dụng Animator chuẩn Roblox để load animation mượt mà
+            local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+            pcall(function()
+                r5_0 = animator:LoadAnimation(r3_0)
+                r5_0.Looped = true
+                r5_0:Play()
+            end)
+        end
+    end
+end)
+
+-- Khi cất nến vào túi đồ
+r2_0.Unequipped:Connect(function()
+    setFlameState(false) -- Tắt hoàn toàn ánh sáng và hạt lửa
+    
+    if r5_0 then
+        r5_0:Stop()
+    end
+end)
